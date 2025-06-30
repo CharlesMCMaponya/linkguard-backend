@@ -1,68 +1,95 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel, HttpUrl
 from fastapi.middleware.cors import CORSMiddleware
+import re
+import logging
+from starlette.status import HTTP_429_TOO_MANY_REQUESTS
+from starlette.responses import JSONResponse
 
 app = FastAPI()
 
-# Allow frontend access (default: localhost)
+# Basic CORS setup (adjust allow_origins in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, change to your frontend URL
+    allow_origins=["*"],  # Change "*" to your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Define expected request body
+# Logging
+logging.basicConfig(level=logging.INFO)
+
+# Request model
 class UrlInput(BaseModel):
     url: str
 
+# Rate limiting (basic in-memory)
+request_counts = {}
+RATE_LIMIT = 5  # Max 5 requests
+TIME_WINDOW = 60  # In seconds
+
+from time import time
+
+def is_rate_limited(ip: str):
+    now = time()
+    if ip not in request_counts:
+        request_counts[ip] = []
+    request_counts[ip] = [t for t in request_counts[ip] if now - t < TIME_WINDOW]
+    if len(request_counts[ip]) >= RATE_LIMIT:
+        return True
+    request_counts[ip].append(now)
+    return False
+
+# Analyze endpoint
 @app.post("/analyze")
-async def analyze_link(data: UrlInput):
-    url = data.url.lower()
+async def analyze_link(data: UrlInput, request: Request):
+    client_ip = request.client.host
+    if is_rate_limited(client_ip):
+        return JSONResponse(status_code=HTTP_429_TOO_MANY_REQUESTS, content={"detail": "Too many requests. Try again later."})
+
+    url = data.url.strip()
+
+    # Basic regex and keyword filtering
     red_flags = []
     score = 100
     category = "General"
     description = "This URL seems safe."
 
-    # Red flag 1: Common scam keywords
-    if any(word in url for word in ["free", "win", "login", "verify", "claim"]):
+    if not re.match(r'^https?://', url):
+        red_flags.append("Invalid URL format")
+        score -= 20
+
+    scam_keywords = ["free", "win", "login", "verify", "claim", "bonus"]
+    if any(word in url.lower() for word in scam_keywords):
         red_flags.append("Suspicious keyword detected")
         score -= 30
         category = "Phishing"
-        description = "Contains common scam-related terms."
+        description = "Contains scam-related terms."
 
-    # Red flag 2: Suspicious domain endings
-    if any(url.endswith(ext) or f".{ext}/" in url for ext in ["xyz", "top", "tk", "click"]):
+    if any(ext in url.lower() for ext in [".xyz", ".top", ".tk"]):
         red_flags.append("Unusual domain extension")
         score -= 20
 
-    # Red flag 3: Impersonating SA government
-    if "gov.za" not in url and "gov" in url:
-        red_flags.append("Pretending to be a government domain")
-        score -= 25
+    if "gov.za" not in url and ("sassa" in url or "nsfas" in url):
+        red_flags.append("Pretending to be SA gov services")
+        score -= 30
         category = "Impersonation"
-        description = "May be impersonating official government site."
+        description = "May be impersonating South African institutions."
 
-    # Red flag 4: Targeting SA services
-    if any(keyword in url for keyword in ["tender", "capitec", "sassa", "nsfas", "govza-", "gov-za"]):
-        red_flags.append("Possible impersonation of SA services")
-        score -= 25
-        category = "Impersonation"
-        description = "Suspicious attempt to mimic South African institutions."
-
-    # Set final safety status
+    status = "Safe"
     if score < 50:
         status = "Dangerous"
     elif score < 80:
         status = "Suspicious"
-    else:
-        status = "Safe"
+
+    # Logging the scan
+    logging.info(f"Scanned by {client_ip}: {url} → {status} ({score})")
 
     return {
         "score": max(score, 0),
         "status": status,
-        "redFlags": red_flags,
+        "redFlags": red_flags or ["No red flags found"],
         "category": category,
-        "description": description,
+        "description": description
     }
