@@ -54,7 +54,7 @@ Returns:
 Live Backend URL (Render):
 https://linkguard-backend.onrender.com
 
-linkguard/backend/screenshots/linkguard-backend-preview.png
+![Screenshot](screenshots/linkguard-backend-preview.png)
 
 Author:
 MCreated with 💻 by Charles Mosehla Charles Maponya 🇿🇦
