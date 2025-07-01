@@ -54,7 +54,8 @@ Returns:
 Live Backend URL (Render):
 https://linkguard-backend.onrender.com
 
-![Screenshot](screenshots/linkguard-backend-preview.png)
+![Screenshot](./screenshots/linkguard-backend-preview.png)
+
 
 
 Author:
