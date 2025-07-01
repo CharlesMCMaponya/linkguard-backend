@@ -57,5 +57,5 @@ https://linkguard-backend.onrender.com
 linkguard/backend/screenshots/linkguard-backend-preview.png
 
 Author:
-MCreated with 💻 by Charles Mosehla Charles Maponya 🇿🇦
+Created with 💻 by Charles Mosehla Charles Maponya 🇿🇦
 For cybersecurity learning, personal growth, and protecting users online.
