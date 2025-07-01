@@ -36,6 +36,7 @@ How to Run This Backend Locally (Step-by-Step):
 CORS Notice:
 This backend uses CORS so your frontend (hosted on Vercel or localhost) can send requests
 without any problem.
+
 Example API Call:
 POST /analyze
 Content-Type: application/json
@@ -53,7 +54,8 @@ Returns:
 Live Backend URL (Render):
 https://linkguard-backend.onrender.com
 
-Author:
-Made by Charles Mosehla Charles Maponya (South Africa)
+linkguard/backend/screenshots/linkguard-backend-preview.png
 
-![Screenshot](screenshots/linkguard-backend-preview.png)
+Author:
+MCreated with 💻 by Charles Mosehla Charles Maponya 🇿🇦
+For cybersecurity learning, personal growth, and protecting users online.
